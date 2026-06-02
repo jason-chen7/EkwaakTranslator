@@ -1,0 +1,11 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+# Keep yt-dlp current — a stale version triggers YouTube's bot-check and
+# breaks extraction. Update with: pip install -U yt-dlp
+yt-dlp>=2026.3.17
+faster-whisper==1.1.1
+requests>=2.32  # faster-whisper imports it but doesn't always pull it in
+anthropic==0.42.0
+python-dotenv==1.0.1
+# optional: only needed if WHISPER_BACKEND=openai
+openai==1.59.6

@@ -1,0 +1,24 @@
+# secrets
+.env
+api/.env
+# youtube session cookies — never commit
+*cookies*.txt
+api/youtube-cookies.txt
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# cache / data
+api/cache.db
+*.db
+
+# node
+web/node_modules/
+web/dist/
+
+# os
+.DS_Store
+Thumbs.db
