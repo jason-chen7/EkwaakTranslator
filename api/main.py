@@ -141,6 +141,21 @@ def clear_cache(_: None = Depends(require_admin)):
     return {"cleared": cache.clear_all()}
 
 
+@app.post("/api/cache/{video_id}/retranslate")
+def retranslate(video_id: str, _: None = Depends(require_admin)):
+    """Re-translate a cached video using the current glossary, reusing its
+    stored Chinese transcript (no re-download / re-transcribe — cheap)."""
+    from .pipeline import translate
+
+    data = cache.get(video_id)
+    if not data:
+        raise HTTPException(404, "Not cached.")
+    zh = [{"start": s["start"], "end": s["end"], "zh": s["zh"]} for s in data["segments"]]
+    new = translate.translate_segments(zh)
+    cache.put(video_id, data["title"], new)
+    return {"video_id": video_id, "segments": len(new)}
+
+
 @app.get("/api/glossary")
 def get_glossary():
     return {"terms": glossary_store.load_terms()}

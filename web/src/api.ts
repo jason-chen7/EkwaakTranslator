@@ -9,6 +9,12 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 export function setAdminToken(t: string) {
   localStorage.setItem("ekwaak_admin", t);
 }
+export function clearAdminToken() {
+  localStorage.removeItem("ekwaak_admin");
+}
+export function hasAdminToken(): boolean {
+  return !!localStorage.getItem("ekwaak_admin");
+}
 function adminHeaders(): Record<string, string> {
   const t = localStorage.getItem("ekwaak_admin");
   return t ? { "X-Admin-Token": t } : {};
@@ -86,6 +92,15 @@ export async function clearCache(): Promise<number> {
     headers: adminHeaders(),
   });
   return (await r.json()).cleared;
+}
+
+export async function retranslateCached(videoId: string): Promise<void> {
+  const r = await fetch(`${API_BASE}/api/cache/${videoId}/retranslate`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+  if (r.status === 403) throw new Error("Admin only.");
+  if (!r.ok) throw new Error("Re-translate failed");
 }
 
 export type Term = { zh: string; en: string; note?: string };

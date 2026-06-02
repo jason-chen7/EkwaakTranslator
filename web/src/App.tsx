@@ -5,6 +5,7 @@ import Glossary from "./components/Glossary";
 import CachePanel from "./components/CachePanel";
 import {
   checkAdmin,
+  clearAdminToken,
   getStatus,
   getUsage,
   getVideo,
@@ -33,7 +34,31 @@ export default function App() {
   const [tab, setTab] = useState<"translate" | "glossary" | "cache">("translate");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginInput, setLoginInput] = useState("");
+  const [loginError, setLoginError] = useState("");
   const seekRef = useRef<((t: number) => void) | null>(null);
+
+  const doLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setAdminToken(loginInput.trim());
+    const ok = await checkAdmin();
+    if (ok) {
+      setIsAdmin(true);
+      setShowLogin(false);
+      setLoginInput("");
+    } else {
+      clearAdminToken();
+      setLoginError("Wrong token.");
+    }
+  };
+
+  const doLogout = () => {
+    clearAdminToken();
+    setIsAdmin(false);
+    if (tab === "cache") setTab("translate");
+  };
 
   const refreshUsage = useCallback(() => {
     getUsage().then(setUsage).catch(() => {});
@@ -195,7 +220,36 @@ export default function App() {
       )}
 
       <footer className="footer">
-        Made by <span className="discord">jyxc</span> on Discord
+        <span>Made by <span className="discord">jyxc</span> on Discord</span>
+        <span className="footer-admin">
+          {isAdmin ? (
+            <>
+              <span className="admin-badge">Admin ✓</span>
+              <button className="link-btn" onClick={doLogout}>Log out</button>
+            </>
+          ) : showLogin ? (
+            <form className="admin-login" onSubmit={doLogin}>
+              <input
+                type="password"
+                autoFocus
+                placeholder="Admin token"
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+              />
+              <button type="submit">Log in</button>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => { setShowLogin(false); setLoginError(""); }}
+              >
+                Cancel
+              </button>
+              {loginError && <span className="login-error">{loginError}</span>}
+            </form>
+          ) : (
+            <button className="link-btn" onClick={() => setShowLogin(true)}>Admin</button>
+          )}
+        </span>
       </footer>
     </div>
   );

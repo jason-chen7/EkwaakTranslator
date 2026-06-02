@@ -219,9 +219,41 @@ main {
 
 /* footer */
 .footer {
-  margin: 60px 0 24px; text-align: center; color: var(--muted); font-size: 14px;
+  margin: 60px 0 24px; color: var(--muted); font-size: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
 }
 .footer .discord {
   color: #5865f2; font-weight: 700;
   background: rgba(88, 101, 242, 0.12); padding: 2px 8px; border-radius: 6px;
 }
+.footer-admin { display: flex; align-items: center; gap: 8px; }
+.link-btn {
+  background: none; border: 0; color: var(--muted); cursor: pointer;
+  font-size: 13px; text-decoration: underline; padding: 4px;
+}
+.link-btn:hover { color: var(--text); }
+.admin-badge { color: var(--accent); font-weight: 700; }
+.admin-login { display: flex; align-items: center; gap: 6px; }
+.admin-login input {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--text); font-size: 13px;
+}
+.admin-login button[type="submit"] {
+  padding: 6px 12px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--accent); color: #1a1300; font-weight: 600; font-size: 13px;
+}
+.login-error { color: #ff6b6b; font-size: 13px; }
+
+/* cache re-translate buttons */
+.cache-bar .retranslate-all {
+  background: var(--accent); color: #1a1300;
+}
+.crow { grid-template-columns: none; }
+.crow .retrans {
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--accent); cursor: pointer; font-size: 13px;
+  white-space: nowrap;
+}
+.crow .retrans:hover:not(:disabled) { border-color: var(--accent); }
+.crow .retrans:disabled, .cache-bar button:disabled { opacity: 0.5; cursor: default; }
