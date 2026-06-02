@@ -63,6 +63,13 @@ def download_audio(url: str, out_dir: str | None = None) -> tuple[str, dict]:
         "noplaylist": True,
     }
 
+    # Enable yt-dlp's EJS challenge solver: it downloads the solver scripts and
+    # runs them via Deno to solve YouTube's n-signature challenge. Required on a
+    # server where cookies force the JS-challenge path. Harmless locally.
+    rc = os.getenv("YTDLP_REMOTE_COMPONENTS", "ejs:github")
+    if rc:
+        opts["remote_components"] = [c.strip() for c in rc.split(",") if c.strip()]
+
     # YouTube sometimes blocks anonymous downloads ("confirm you're not a bot"),
     # more often from datacenter IPs. Usually NOT needed for public videos.
     # Supply login cookies (throwaway account) via ONE of:
