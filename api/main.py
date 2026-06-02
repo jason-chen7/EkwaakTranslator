@@ -108,6 +108,24 @@ def get_usage():
     return limits.usage()
 
 
+@app.get("/api/debug")
+def debug():
+    """Diagnostics for server-side YouTube extraction (no secrets exposed)."""
+    import shutil
+
+    import yt_dlp
+
+    return {
+        "yt_dlp_version": yt_dlp.version.__version__,
+        "deno_found": shutil.which("deno"),
+        "node_found": shutil.which("node"),
+        "ffmpeg_found": shutil.which("ffmpeg"),
+        "whisper_backend": os.getenv("WHISPER_BACKEND"),
+        "has_cookies": bool(os.getenv("YTDLP_COOKIES_CONTENT") or os.getenv("YTDLP_COOKIES_FILE")),
+        "player_client": os.getenv("YTDLP_PLAYER_CLIENT") or "(default)",
+    }
+
+
 @app.get("/api/cache")
 def list_cache():
     return {"videos": cache.list_all()}
