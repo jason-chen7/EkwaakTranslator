@@ -1,0 +1,14 @@
+# Netlify build config for the frontend, which lives in the web/ subdirectory.
+# This is what fixes "Page not found": without it, Netlify builds from the repo
+# root and never finds the app.
+
+[build]
+  base = "web"                 # cd into web/ before building
+  command = "npm run build"    # Vite build
+  publish = "dist"             # web/dist (relative to base)
+
+# Single-page app: serve index.html for any path so client routing works.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
