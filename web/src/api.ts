@@ -103,6 +103,35 @@ export async function retranslateCached(videoId: string): Promise<void> {
   if (!r.ok) throw new Error("Re-translate failed");
 }
 
+export type LogEntry = {
+  ts: number;
+  ip: string;
+  video_id: string | null;
+  event: string;
+  detail: string | null;
+};
+
+export async function getLogs(): Promise<LogEntry[]> {
+  const r = await fetch(`${API_BASE}/api/logs`, { headers: adminHeaders() });
+  return (await r.json()).logs;
+}
+
+export type Stats = {
+  total_requests: number;
+  requests_24h: number;
+  unique_ips: number;
+  new_translations: number;
+  cache_hits: number;
+  errors: number;
+  cache_hit_rate: number;
+  top_videos: { video_id: string; count: number }[];
+};
+
+export async function getStats(): Promise<Stats> {
+  const r = await fetch(`${API_BASE}/api/stats`, { headers: adminHeaders() });
+  return r.json();
+}
+
 export type Term = { zh: string; en: string; note?: string };
 
 export async function getGlossary(): Promise<Term[]> {

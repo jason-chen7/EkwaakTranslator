@@ -28,7 +28,7 @@ def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
     if ADMIN_TOKEN and x_admin_token != ADMIN_TOKEN:
         raise HTTPException(403, "Editing is restricted to the admin.")
 
-from . import cache, glossary_store, jobs, limits  # noqa: E402
+from . import cache, glossary_store, jobs, limits, logs  # noqa: E402
 from .pipeline.download import extract_video_id  # noqa: E402
 
 app = FastAPI(title="Ekwaak Translator")
@@ -64,13 +64,18 @@ def _client_ip(request: Request) -> str:
 
 @app.post("/api/translate")
 def translate(req: TranslateReq, request: Request):
+    ip = _client_ip(request)
     vid = extract_video_id(req.url)
     if not vid:
+        logs.log(ip, "bad_url", detail=req.url[:120])
         raise HTTPException(400, "Could not find a YouTube video id in that URL.")
+
+    logs.log(ip, "request", vid)
 
     # Cache hit: free, instant, never counts against limits.
     cached = cache.get(vid)
     if cached:
+        logs.log(ip, "cache_hit", vid, cached["title"])
         return {"video_id": vid, "status": "done", "progress": 100, "title": cached["title"]}
 
     # Already being worked on: return live status without reserving again.
@@ -79,11 +84,13 @@ def translate(req: TranslateReq, request: Request):
         return {"video_id": vid, **existing}
 
     # New work -> enforce cost limits before spending anything.
-    ok, reason = limits.check_and_reserve(_client_ip(request), vid)
+    ok, reason = limits.check_and_reserve(ip, vid)
     if not ok:
+        logs.log(ip, "rate_limited", vid, reason)
         raise HTTPException(429, reason)
 
-    status = jobs.start(req.url, vid)
+    logs.log(ip, "new", vid)
+    status = jobs.start(req.url, vid, ip)
     return {"video_id": vid, **status}
 
 
@@ -154,6 +161,16 @@ def retranslate(video_id: str, _: None = Depends(require_admin)):
     new = translate.translate_segments(zh)
     cache.put(video_id, data["title"], new)
     return {"video_id": video_id, "segments": len(new)}
+
+
+@app.get("/api/logs")
+def get_logs(limit: int = 200, _: None = Depends(require_admin)):
+    return {"logs": logs.recent(min(limit, 1000))}
+
+
+@app.get("/api/stats")
+def get_stats(_: None = Depends(require_admin)):
+    return logs.stats()
 
 
 @app.get("/api/glossary")

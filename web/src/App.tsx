@@ -3,6 +3,7 @@ import Player from "./components/Player";
 import Transcript from "./components/Transcript";
 import Glossary from "./components/Glossary";
 import CachePanel from "./components/CachePanel";
+import Logs from "./components/Logs";
 import {
   checkAdmin,
   clearAdminToken,
@@ -31,7 +32,7 @@ export default function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [showOriginal, setShowOriginal] = useState(true);
-  const [tab, setTab] = useState<"translate" | "glossary" | "cache">("translate");
+  const [tab, setTab] = useState<"translate" | "glossary" | "cache" | "logs">("translate");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -146,6 +147,14 @@ export default function App() {
                 Cache
               </button>
             )}
+            {isAdmin && (
+              <button
+                className={tab === "logs" ? "tab active" : "tab"}
+                onClick={() => setTab("logs")}
+              >
+                Logs
+              </button>
+            )}
           </nav>
         </div>
         {usage && (
@@ -176,6 +185,7 @@ export default function App() {
 
       {tab === "glossary" && <Glossary editable={isAdmin} />}
       {tab === "cache" && isAdmin && <CachePanel />}
+      {tab === "logs" && isAdmin && <Logs />}
 
       {tab === "translate" && status?.status === "error" && (
         <div className="error">⚠ {status.error}</div>

@@ -245,6 +245,47 @@ main {
 }
 .login-error { color: #ff6b6b; font-size: 13px; }
 
+/* logs / stats */
+.logs { margin-top: 20px; }
+.logs-bar { display: flex; align-items: center; justify-content: space-between; }
+.logs-bar h3 { margin: 0; }
+.logs-bar .refresh {
+  padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--line); color: var(--text); font-weight: 600;
+}
+.stat-cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px; margin: 14px 0;
+}
+.stat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; text-align: center;
+}
+.stat b { display: block; font-size: 24px; color: var(--accent); }
+.stat span { font-size: 12px; color: var(--muted); }
+.logtable {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; font-size: 13px;
+}
+.loghead, .logrow {
+  display: grid; grid-template-columns: 1.4fr 1fr 0.9fr 1fr 1.6fr; gap: 8px;
+  padding: 8px 12px; align-items: center;
+}
+.loghead { color: var(--muted); border-bottom: 1px solid var(--line); font-size: 12px; }
+.logrow { border-bottom: 1px solid var(--line); }
+.logrow:last-child { border-bottom: 0; }
+.logrow .lt { color: var(--muted); }
+.logrow .lip { font-family: monospace; }
+.logrow .lev { font-weight: 600; }
+.logrow.ev-error .lev { color: #ff6b6b; }
+.logrow.ev-cache_hit .lev { color: #4ade80; }
+.logrow.ev-done .lev { color: var(--accent); }
+.logrow.ev-rate_limited .lev { color: #fbbf24; }
+.logrow .lvid a { color: var(--accent); text-decoration: none; }
+.logrow .ldetail {
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* cache re-translate buttons */
 .cache-bar .retranslate-all {
   background: var(--accent); color: #1a1300;
