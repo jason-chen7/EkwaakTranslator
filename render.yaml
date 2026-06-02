@@ -1,0 +1,33 @@
+# Render Blueprint for the Ekwaak Translator backend (FastAPI).
+# Deploy: render.com -> New -> Blueprint -> connect this repo.
+# Secrets (sync:false) are entered in the Render dashboard, never in the repo.
+
+services:
+  - type: web
+    name: ekwaak-api
+    runtime: python
+    plan: free                       # upgrade to "starter" ($7/mo) for always-on + a disk
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Cloud servers can't run local Whisper (too little RAM) -> use the API.
+      - key: WHISPER_BACKEND
+        value: openai
+      # --- secrets: set these in the Render dashboard ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # Optional: throwaway-account cookies.txt CONTENTS, if YouTube blocks the
+      # server IP. Paste the whole file into this var in the dashboard.
+      - key: YTDLP_COOKIES_CONTENT
+        sync: false
+      # --- cost controls (OpenAI Whisper adds ~$0.09/video, so 10/day ~ <$2) ---
+      - key: DAILY_NEW_VIDEO_LIMIT
+        value: "10"
+      - key: RATE_LIMIT_WINDOW_MIN
+        value: "20"
+      - key: RATE_LIMIT_PER_WINDOW
+        value: "2"

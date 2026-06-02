@@ -27,6 +27,23 @@ def extract_video_id(url: str) -> str | None:
     return None
 
 
+_cookie_tmp: str | None = None
+
+
+def _resolve_cookiefile() -> str | None:
+    """Return a path to a cookies.txt, writing one from YTDLP_COOKIES_CONTENT if
+    provided (so cookies can live in a server env var, not the repo)."""
+    global _cookie_tmp
+    content = os.getenv("YTDLP_COOKIES_CONTENT")
+    if content:
+        if _cookie_tmp is None:
+            fd, _cookie_tmp = tempfile.mkstemp(prefix="ytcookies_", suffix=".txt")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+        return _cookie_tmp
+    return os.getenv("YTDLP_COOKIES_FILE")
+
+
 def download_audio(url: str, out_dir: str | None = None) -> tuple[str, dict]:
     """Download best audio-only stream. Returns (path, info_dict)."""
     out_dir = out_dir or tempfile.gettempdir()
@@ -39,17 +56,19 @@ def download_audio(url: str, out_dir: str | None = None) -> tuple[str, dict]:
         "noplaylist": True,
     }
 
-    # YouTube increasingly blocks anonymous downloads ("confirm you're not a
-    # bot"). Borrow login cookies to get past it. Configure ONE of:
-    #   YTDLP_COOKIES_FROM_BROWSER=firefox|chrome|edge|brave|chromium
-    #   YTDLP_COOKIES_FILE=C:\path\to\cookies.txt   (Netscape cookie export)
+    # YouTube sometimes blocks anonymous downloads ("confirm you're not a bot"),
+    # more often from datacenter IPs. Usually NOT needed for public videos.
+    # Supply login cookies (throwaway account) via ONE of:
+    #   YTDLP_COOKIES_CONTENT   = the cookies.txt contents (best for servers/Render)
+    #   YTDLP_COOKIES_FILE      = path to a cookies.txt on disk
+    #   YTDLP_COOKIES_FROM_BROWSER = firefox|chrome|edge|brave  (local only)
+    cookiefile = _resolve_cookiefile()
     browser = os.getenv("YTDLP_COOKIES_FROM_BROWSER")
-    cookiefile = os.getenv("YTDLP_COOKIES_FILE")
-    if browser:
+    if cookiefile:
+        opts["cookiefile"] = cookiefile
+    elif browser:
         # tuple form: (browser, profile, keyring, container)
         opts["cookiesfrombrowser"] = (browser.strip().lower(), None, None, None)
-    elif cookiefile:
-        opts["cookiefile"] = cookiefile
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
