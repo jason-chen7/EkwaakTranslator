@@ -77,7 +77,7 @@ export default function App() {
     <div className="app">
       <header>
         <div className="topbar">
-          <h1>🏰 Ekwaak Translator</h1>
+          <h1>Ekwaak Translator</h1>
           <nav className="tabs">
             <button
               className={tab === "translate" ? "tab active" : "tab"}
@@ -107,14 +107,21 @@ export default function App() {
           </div>
         )}
         {tab === "translate" && (
-          <form onSubmit={onSubmit}>
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Paste a YouTube URL…"
-            />
-            <button disabled={busy}>{busy ? "Working…" : "Translate"}</button>
-          </form>
+          <div className="hero">
+            <div className="hero-line top">Watch Ekwaak</div>
+            <form className="hero-form" onSubmit={onSubmit}>
+              <input
+                className="hero-input"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="Paste a YouTube URL…"
+              />
+              <button className="hero-btn" disabled={busy}>
+                {busy ? "Working…" : "Translate"}
+              </button>
+            </form>
+            <div className="hero-line bottom">Stop Being Shit</div>
+          </div>
         )}
       </header>
 
