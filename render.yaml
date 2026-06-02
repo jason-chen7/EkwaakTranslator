@@ -7,7 +7,11 @@ services:
     name: ekwaak-api
     runtime: python
     plan: free                       # upgrade to "starter" ($7/mo) for always-on + a disk
-    buildCommand: pip install -r api/requirements.txt
+    # Install Deno (JS runtime) so yt-dlp can solve YouTube's n-signature
+    # challenge, then install Python deps.
+    buildCommand: |
+      curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/opt/render/project/.deno sh
+      pip install -r api/requirements.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION

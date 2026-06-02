@@ -13,6 +13,13 @@ from pathlib import Path
 
 import yt_dlp
 
+# YouTube's "n-signature" challenge needs a JS runtime. yt-dlp auto-detects
+# Deno if it's on PATH, so make sure the locations we install it to (see
+# render.yaml / Dockerfile) are visible at runtime.
+for _deno_bin in ("/opt/render/project/.deno/bin", os.path.expanduser("~/.deno/bin"), "/usr/local/bin"):
+    if os.path.isdir(_deno_bin) and _deno_bin not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = _deno_bin + os.pathsep + os.environ["PATH"]
+
 _ID_RE = re.compile(r"(?:v=|youtu\.be/|/shorts/|/embed/)([0-9A-Za-z_-]{11})")
 
 
@@ -69,6 +76,14 @@ def download_audio(url: str, out_dir: str | None = None) -> tuple[str, dict]:
     elif browser:
         # tuple form: (browser, profile, keyring, container)
         opts["cookiesfrombrowser"] = (browser.strip().lower(), None, None, None)
+
+    # Optional: force specific YouTube player client(s), e.g. "web" or
+    # "default,web_safari". Sometimes avoids the broken "tv" path on servers.
+    player_client = os.getenv("YTDLP_PLAYER_CLIENT")
+    if player_client:
+        opts["extractor_args"] = {
+            "youtube": {"player_client": [c.strip() for c in player_client.split(",") if c.strip()]}
+        }
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
