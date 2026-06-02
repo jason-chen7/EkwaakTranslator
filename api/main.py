@@ -7,15 +7,26 @@ Endpoints:
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Load api/.env regardless of the current working directory.
 load_dotenv(Path(__file__).resolve().parent / ".env")
+
+# Admin token gates all editing (glossary, cache). Set this in production so
+# random visitors can't change your glossary or clear your cache. If unset
+# (local dev), editing is open for convenience.
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    if ADMIN_TOKEN and x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(403, "Editing is restricted to the admin.")
 
 from . import cache, glossary_store, jobs, limits  # noqa: E402
 from .pipeline.download import extract_video_id  # noqa: E402
@@ -103,12 +114,12 @@ def list_cache():
 
 
 @app.delete("/api/cache/{video_id}")
-def delete_cache(video_id: str):
+def delete_cache(video_id: str, _: None = Depends(require_admin)):
     return {"deleted": cache.delete(video_id)}
 
 
 @app.delete("/api/cache")
-def clear_cache():
+def clear_cache(_: None = Depends(require_admin)):
     return {"cleared": cache.clear_all()}
 
 
@@ -118,6 +129,12 @@ def get_glossary():
 
 
 @app.put("/api/glossary")
-def put_glossary(req: GlossaryReq):
+def put_glossary(req: GlossaryReq, _: None = Depends(require_admin)):
     saved = glossary_store.save_terms([t.model_dump() for t in req.terms])
     return {"terms": saved}
+
+
+@app.get("/api/admin-check")
+def admin_check(x_admin_token: str | None = Header(default=None)):
+    """Frontend uses this to decide whether to show editing controls."""
+    return {"is_admin": bool(ADMIN_TOKEN) and x_admin_token == ADMIN_TOKEN}

@@ -164,6 +164,10 @@ main {
   display: grid; grid-template-columns: 1fr 1.3fr 1.3fr 36px; gap: 8px;
   align-items: center; padding: 6px 10px;
 }
+.gtable.readonly .ghead, .gtable.readonly .grow {
+  grid-template-columns: 1fr 1.3fr 1.3fr;
+}
+.gtable.readonly input { border-color: transparent; background: transparent; cursor: default; }
 .ghead { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
 .grow { border-bottom: 1px solid var(--line); }
 .grow:last-child { border-bottom: 0; }
@@ -212,3 +216,12 @@ main {
 .crow .del { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; }
 .crow .del:hover { color: #ff6b6b; }
 .empty { color: var(--muted); margin-top: 16px; }
+
+/* footer */
+.footer {
+  margin: 60px 0 24px; text-align: center; color: var(--muted); font-size: 14px;
+}
+.footer .discord {
+  color: #5865f2; font-weight: 700;
+  background: rgba(88, 101, 242, 0.12); padding: 2px 8px; border-radius: 6px;
+}

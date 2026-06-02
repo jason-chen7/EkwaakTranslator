@@ -3,7 +3,17 @@ import Player from "./components/Player";
 import Transcript from "./components/Transcript";
 import Glossary from "./components/Glossary";
 import CachePanel from "./components/CachePanel";
-import { getStatus, getUsage, getVideo, startTranslate, type Segment, type Status, type Usage } from "./api";
+import {
+  checkAdmin,
+  getStatus,
+  getUsage,
+  getVideo,
+  setAdminToken,
+  startTranslate,
+  type Segment,
+  type Status,
+  type Usage,
+} from "./api";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Queued…",
@@ -22,6 +32,7 @@ export default function App() {
   const [showOriginal, setShowOriginal] = useState(true);
   const [tab, setTab] = useState<"translate" | "glossary" | "cache">("translate");
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const seekRef = useRef<((t: number) => void) | null>(null);
 
   const refreshUsage = useCallback(() => {
@@ -30,6 +41,17 @@ export default function App() {
   useEffect(() => {
     refreshUsage();
   }, [refreshUsage]);
+
+  // Admin mode: set the token once by visiting the site with #admin=YOUR_TOKEN.
+  useEffect(() => {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const t = params.get("admin");
+    if (t) {
+      setAdminToken(t);
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    checkAdmin().then(setIsAdmin);
+  }, []);
 
   const poll = useCallback((id: string) => {
     const tick = async () => {
@@ -91,12 +113,14 @@ export default function App() {
             >
               Glossary
             </button>
-            <button
-              className={tab === "cache" ? "tab active" : "tab"}
-              onClick={() => setTab("cache")}
-            >
-              Cache
-            </button>
+            {isAdmin && (
+              <button
+                className={tab === "cache" ? "tab active" : "tab"}
+                onClick={() => setTab("cache")}
+              >
+                Cache
+              </button>
+            )}
           </nav>
         </div>
         {usage && (
@@ -125,8 +149,8 @@ export default function App() {
         )}
       </header>
 
-      {tab === "glossary" && <Glossary />}
-      {tab === "cache" && <CachePanel />}
+      {tab === "glossary" && <Glossary editable={isAdmin} />}
+      {tab === "cache" && isAdmin && <CachePanel />}
 
       {tab === "translate" && status?.status === "error" && (
         <div className="error">⚠ {status.error}</div>
@@ -169,6 +193,10 @@ export default function App() {
           />
         </main>
       )}
+
+      <footer className="footer">
+        Made by <span className="discord">jyxc</span> on Discord
+      </footer>
     </div>
   );
 }

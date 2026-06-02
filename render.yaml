@@ -20,6 +20,11 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Pick any secret string. Editing the glossary/cache requires it, so the
+      # public can't change your dictionary. You unlock editing by visiting the
+      # site with #admin=THIS_VALUE once.
+      - key: ADMIN_TOKEN
+        sync: false
       # Optional: throwaway-account cookies.txt CONTENTS, if YouTube blocks the
       # server IP. Paste the whole file into this var in the dashboard.
       - key: YTDLP_COOKIES_CONTENT

@@ -4,6 +4,24 @@
 // e.g. https://ekwaak-api.onrender.com
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
+// Admin token (for editing the glossary / cache) is stored locally and sent as
+// a header. It's set once via a #admin=TOKEN URL fragment.
+export function setAdminToken(t: string) {
+  localStorage.setItem("ekwaak_admin", t);
+}
+function adminHeaders(): Record<string, string> {
+  const t = localStorage.getItem("ekwaak_admin");
+  return t ? { "X-Admin-Token": t } : {};
+}
+export async function checkAdmin(): Promise<boolean> {
+  try {
+    const r = await fetch(`${API_BASE}/api/admin-check`, { headers: adminHeaders() });
+    return (await r.json()).is_admin === true;
+  } catch {
+    return false;
+  }
+}
+
 export type Segment = { start: number; end: number; zh: string; en: string };
 export type Status = {
   status: "queued" | "downloading" | "transcribing" | "translating" | "done" | "error" | "unknown";
@@ -56,11 +74,17 @@ export async function listCache(): Promise<CachedVideo[]> {
 }
 
 export async function deleteCached(videoId: string): Promise<void> {
-  await fetch(`${API_BASE}/api/cache/${videoId}`, { method: "DELETE" });
+  await fetch(`${API_BASE}/api/cache/${videoId}`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
 }
 
 export async function clearCache(): Promise<number> {
-  const r = await fetch(`${API_BASE}/api/cache`, { method: "DELETE" });
+  const r = await fetch(`${API_BASE}/api/cache`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
   return (await r.json()).cleared;
 }
 
@@ -74,9 +98,10 @@ export async function getGlossary(): Promise<Term[]> {
 export async function saveGlossary(terms: Term[]): Promise<Term[]> {
   const r = await fetch(`${API_BASE}/api/glossary`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...adminHeaders() },
     body: JSON.stringify({ terms }),
   });
+  if (r.status === 403) throw new Error("Editing is admin-only.");
   if (!r.ok) throw new Error("Save failed");
   return (await r.json()).terms;
 }
