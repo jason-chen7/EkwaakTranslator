@@ -6,29 +6,20 @@ attach a persistent disk or external DB to keep history long-term.
 """
 from __future__ import annotations
 
-import sqlite3
 import time
-from pathlib import Path
 
-from .db import DB_PATH as _DB
+from . import db
 
 
-def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(_DB)
-    c.execute(
-        "CREATE TABLE IF NOT EXISTS logs ("
-        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  ts REAL, ip TEXT, video_id TEXT, event TEXT, detail TEXT"
-        ")"
-    )
-    return c
+def _conn():
+    return db.connect()
 
 
 def log(ip: str, event: str, video_id: str | None = None, detail: str | None = None) -> None:
     try:
         with _conn() as c:
             c.execute(
-                "INSERT INTO logs (ts, ip, video_id, event, detail) VALUES (?,?,?,?,?)",
+                db.q("INSERT INTO logs (ts, ip, video_id, event, detail) VALUES (?,?,?,?,?)"),
                 (time.time(), ip, video_id, event, detail),
             )
     except Exception:  # logging must never break the request
@@ -38,7 +29,7 @@ def log(ip: str, event: str, video_id: str | None = None, detail: str | None = N
 def recent(limit: int = 200) -> list[dict]:
     with _conn() as c:
         rows = c.execute(
-            "SELECT ts, ip, video_id, event, detail FROM logs ORDER BY id DESC LIMIT ?",
+            db.q("SELECT ts, ip, video_id, event, detail FROM logs ORDER BY id DESC LIMIT ?"),
             (limit,),
         ).fetchall()
     return [
@@ -57,7 +48,7 @@ def stats() -> dict:
         cache_hits = c.execute("SELECT COUNT(*) FROM logs WHERE event='cache_hit'").fetchone()[0]
         errors = c.execute("SELECT COUNT(*) FROM logs WHERE event='error'").fetchone()[0]
         today = c.execute(
-            "SELECT COUNT(*) FROM logs WHERE event='request' AND ts>=?", (day_ago,)
+            db.q("SELECT COUNT(*) FROM logs WHERE event='request' AND ts>=?"), (day_ago,)
         ).fetchone()[0]
         top = c.execute(
             "SELECT video_id, COUNT(*) c FROM logs WHERE video_id IS NOT NULL "

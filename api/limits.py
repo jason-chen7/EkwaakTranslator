@@ -14,25 +14,17 @@ State lives in SQLite so it survives a server restart.
 from __future__ import annotations
 
 import os
-import sqlite3
 import time
-from pathlib import Path
 
-from .db import DB_PATH as _DB
+from . import db
 
 DAILY_LIMIT = int(os.getenv("DAILY_NEW_VIDEO_LIMIT", "15"))
 WINDOW_MIN = int(os.getenv("RATE_LIMIT_WINDOW_MIN", "20"))
 WINDOW_MAX = int(os.getenv("RATE_LIMIT_PER_WINDOW", "2"))
 
 
-def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(_DB)
-    c.execute(
-        "CREATE TABLE IF NOT EXISTS usage_events ("
-        "  ts REAL, ip TEXT, video_id TEXT"
-        ")"
-    )
-    return c
+def _conn():
+    return db.connect()
 
 
 def _day_start(now: float) -> float:
@@ -44,7 +36,7 @@ def usage() -> dict:
     now = time.time()
     with _conn() as c:
         daily = c.execute(
-            "SELECT COUNT(*) FROM usage_events WHERE ts >= ?", (_day_start(now),)
+            db.q("SELECT COUNT(*) FROM usage_events WHERE ts >= ?"), (_day_start(now),)
         ).fetchone()[0]
     return {
         "daily_used": daily,
@@ -60,7 +52,7 @@ def check_and_reserve(ip: str, video_id: str) -> tuple[bool, str | None]:
     now = time.time()
     with _conn() as c:
         daily = c.execute(
-            "SELECT COUNT(*) FROM usage_events WHERE ts >= ?", (_day_start(now),)
+            db.q("SELECT COUNT(*) FROM usage_events WHERE ts >= ?"), (_day_start(now),)
         ).fetchone()[0]
         if daily >= DAILY_LIMIT:
             return False, (
@@ -70,12 +62,14 @@ def check_and_reserve(ip: str, video_id: str) -> tuple[bool, str | None]:
 
         window_start = now - WINDOW_MIN * 60
         recent = c.execute(
-            "SELECT MIN(ts) FROM (SELECT ts FROM usage_events "
-            "WHERE ip=? AND ts >= ? ORDER BY ts DESC LIMIT ?)",
+            db.q(
+                "SELECT MIN(ts) FROM (SELECT ts FROM usage_events "
+                "WHERE ip=? AND ts >= ? ORDER BY ts DESC LIMIT ?) sub"
+            ),
             (ip, window_start, WINDOW_MAX),
         ).fetchone()[0]
         window_count = c.execute(
-            "SELECT COUNT(*) FROM usage_events WHERE ip=? AND ts >= ?",
+            db.q("SELECT COUNT(*) FROM usage_events WHERE ip=? AND ts >= ?"),
             (ip, window_start),
         ).fetchone()[0]
         if window_count >= WINDOW_MAX:
@@ -86,7 +80,7 @@ def check_and_reserve(ip: str, video_id: str) -> tuple[bool, str | None]:
             )
 
         c.execute(
-            "INSERT INTO usage_events (ts, ip, video_id) VALUES (?,?,?)",
+            db.q("INSERT INTO usage_events (ts, ip, video_id) VALUES (?,?,?)"),
             (now, ip, video_id),
         )
     return True, None
@@ -97,8 +91,8 @@ def release(video_id: str) -> None:
     before any Claude tokens are spent)."""
     with _conn() as c:
         row = c.execute(
-            "SELECT rowid FROM usage_events WHERE video_id=? ORDER BY ts DESC LIMIT 1",
+            db.q("SELECT id FROM usage_events WHERE video_id=? ORDER BY ts DESC LIMIT 1"),
             (video_id,),
         ).fetchone()
         if row:
-            c.execute("DELETE FROM usage_events WHERE rowid=?", (row[0],))
+            c.execute(db.q("DELETE FROM usage_events WHERE id=?"), (row[0],))

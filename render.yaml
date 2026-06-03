@@ -24,6 +24,14 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Supabase/Postgres connection string -> persistent cache, logs, usage.
+      # Use the "Transaction pooler" URI from Supabase (port 6543). If unset,
+      # falls back to an ephemeral SQLite file that resets on redeploy.
+      - key: DATABASE_URL
+        sync: false
+      # Admin token gating glossary/cache/logs editing.
+      - key: ADMIN_TOKEN
+        sync: false
       # Pick any secret string. Editing the glossary/cache requires it, so the
       # public can't change your dictionary. You unlock editing by visiting the
       # site with #admin=THIS_VALUE once.

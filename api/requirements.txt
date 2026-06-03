@@ -7,5 +7,7 @@ faster-whisper==1.1.1
 requests>=2.32  # faster-whisper imports it but doesn't always pull it in
 anthropic==0.42.0
 python-dotenv==1.0.1
+# Postgres driver (used when DATABASE_URL is set, e.g. Supabase). Harmless otherwise.
+psycopg[binary]>=3.2
 # optional: only needed if WHISPER_BACKEND=openai
 openai==1.59.6

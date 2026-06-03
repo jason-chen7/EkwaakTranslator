@@ -1,34 +1,20 @@
-"""Tiny SQLite cache: video_id -> translated segments + metadata.
+"""Video cache: video_id -> translated segments + metadata.
 
-Every video is transcribed + translated only once. This is the main cost
-control for a public, you-pay-the-keys deployment.
+Every video is transcribed + translated only once. Backed by SQLite (local) or
+Postgres (prod) via db.py.
 """
 from __future__ import annotations
 
 import json
-import sqlite3
-from pathlib import Path
+import time
 
-from .db import DB_PATH as _DB
-
-
-def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(_DB)
-    c.execute(
-        "CREATE TABLE IF NOT EXISTS videos ("
-        "  video_id TEXT PRIMARY KEY,"
-        "  title TEXT,"
-        "  segments TEXT,"
-        "  created REAL DEFAULT (strftime('%s','now'))"
-        ")"
-    )
-    return c
+from . import db
 
 
 def get(video_id: str) -> dict | None:
-    with _conn() as c:
+    with db.connect() as c:
         row = c.execute(
-            "SELECT title, segments FROM videos WHERE video_id=?", (video_id,)
+            db.q("SELECT title, segments FROM videos WHERE video_id=?"), (video_id,)
         ).fetchone()
     if not row:
         return None
@@ -36,39 +22,50 @@ def get(video_id: str) -> dict | None:
 
 
 def put(video_id: str, title: str, segments: list[dict]) -> None:
-    with _conn() as c:
-        c.execute(
-            "INSERT OR REPLACE INTO videos (video_id, title, segments) VALUES (?,?,?)",
-            (video_id, title, json.dumps(segments, ensure_ascii=False)),
-        )
+    seg = json.dumps(segments, ensure_ascii=False)
+    created = time.time()
+    with db.connect() as c:
+        if db.IS_PG:
+            c.execute(
+                "INSERT INTO videos (video_id, title, segments, created) "
+                "VALUES (%s,%s,%s,%s) ON CONFLICT (video_id) DO UPDATE SET "
+                "title=EXCLUDED.title, segments=EXCLUDED.segments, created=EXCLUDED.created",
+                (video_id, title, seg, created),
+            )
+        else:
+            c.execute(
+                "INSERT OR REPLACE INTO videos (video_id, title, segments, created) "
+                "VALUES (?,?,?,?)",
+                (video_id, title, seg, created),
+            )
 
 
 def list_all() -> list[dict]:
     """List cached videos (no segment payload), sorted by link/id."""
-    with _conn() as c:
+    with db.connect() as c:
         rows = c.execute(
             "SELECT video_id, title, created FROM videos ORDER BY video_id"
         ).fetchall()
-    out = []
-    for vid, title, created in rows:
-        out.append(
-            {
-                "video_id": vid,
-                "title": title,
-                "url": f"https://www.youtube.com/watch?v={vid}",
-                "created": created,
-            }
-        )
-    return out
+    return [
+        {
+            "video_id": vid,
+            "title": title,
+            "url": f"https://www.youtube.com/watch?v={vid}",
+            "created": created,
+        }
+        for vid, title, created in rows
+    ]
 
 
 def delete(video_id: str) -> bool:
-    with _conn() as c:
-        cur = c.execute("DELETE FROM videos WHERE video_id=?", (video_id,))
-    return cur.rowcount > 0
+    with db.connect() as c:
+        cur = c.execute(db.q("DELETE FROM videos WHERE video_id=?"), (video_id,))
+        n = cur.rowcount
+    return n > 0
 
 
 def clear_all() -> int:
-    with _conn() as c:
+    with db.connect() as c:
         cur = c.execute("DELETE FROM videos")
-    return cur.rowcount
+        n = cur.rowcount
+    return n
