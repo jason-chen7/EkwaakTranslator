@@ -9,7 +9,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-_DB = Path(__file__).with_name("cache.db")
+from .db import DB_PATH as _DB
 
 
 def _conn() -> sqlite3.Connection:

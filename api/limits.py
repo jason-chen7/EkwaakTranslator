@@ -18,7 +18,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-_DB = Path(__file__).with_name("cache.db")
+from .db import DB_PATH as _DB
 
 DAILY_LIMIT = int(os.getenv("DAILY_NEW_VIDEO_LIMIT", "15"))
 WINDOW_MIN = int(os.getenv("RATE_LIMIT_WINDOW_MIN", "20"))
