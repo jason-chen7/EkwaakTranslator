@@ -122,6 +122,8 @@ def debug():
 
     import yt_dlp
 
+    from . import db
+
     return {
         "yt_dlp_version": yt_dlp.version.__version__,
         "deno_found": shutil.which("deno"),
@@ -130,6 +132,8 @@ def debug():
         "whisper_backend": os.getenv("WHISPER_BACKEND"),
         "has_cookies": bool(os.getenv("YTDLP_COOKIES_CONTENT") or os.getenv("YTDLP_COOKIES_FILE")),
         "player_client": os.getenv("YTDLP_PLAYER_CLIENT") or "(default)",
+        "db_backend": "postgres" if db.IS_PG else "sqlite (ephemeral!)",
+        "cached_videos": len(cache.list_all()),
     }
 
 
