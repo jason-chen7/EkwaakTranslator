@@ -48,7 +48,7 @@ def _translate_batch(client, system_blocks, batch: list[dict]) -> list[str]:
     )
     resp = client.messages.create(
         model=MODEL,
-        max_tokens=4096,
+        max_tokens=8192,
         system=system_blocks,
         messages=[{"role": "user", "content": user}],
     )
@@ -57,10 +57,27 @@ def _translate_batch(client, system_blocks, batch: list[dict]) -> list[str]:
     if text.startswith("```"):
         text = text.strip("`")
         text = text[text.find("[") :]
-    arr = json.loads(text[text.find("[") : text.rfind("]") + 1])
-    if len(arr) != len(batch):
-        # fall back: pad/truncate so alignment never crashes the app
-        arr = (arr + [""] * len(batch))[: len(batch)]
+
+    arr = None
+    try:
+        parsed = json.loads(text[text.find("[") : text.rfind("]") + 1])
+        if isinstance(parsed, list) and len(parsed) == len(batch):
+            arr = parsed
+    except (json.JSONDecodeError, ValueError):
+        arr = None
+
+    if arr is None:
+        # Response was truncated, malformed, or the wrong length. Split the
+        # batch and retry each half — smaller batches fit and re-align. A
+        # single line that still fails falls back to its original Chinese.
+        if len(batch) == 1:
+            return [batch[0]["zh"]]
+        mid = len(batch) // 2
+        return (
+            _translate_batch(client, system_blocks, batch[:mid])
+            + _translate_batch(client, system_blocks, batch[mid:])
+        )
+
     return [str(x) for x in arr]
 
 
