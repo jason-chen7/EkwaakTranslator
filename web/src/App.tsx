@@ -4,6 +4,7 @@ import Transcript from "./components/Transcript";
 import Glossary from "./components/Glossary";
 import CachePanel from "./components/CachePanel";
 import Logs from "./components/Logs";
+import Cookies from "./components/Cookies";
 import {
   checkAdmin,
   clearAdminToken,
@@ -32,7 +33,7 @@ export default function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [showOriginal, setShowOriginal] = useState(true);
-  const [tab, setTab] = useState<"translate" | "glossary" | "cache" | "logs">("translate");
+  const [tab, setTab] = useState<"translate" | "glossary" | "cache" | "logs" | "cookies">("translate");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -155,6 +156,14 @@ export default function App() {
                 Logs
               </button>
             )}
+            {isAdmin && (
+              <button
+                className={tab === "cookies" ? "tab active" : "tab"}
+                onClick={() => setTab("cookies")}
+              >
+                Cookies
+              </button>
+            )}
           </nav>
         </div>
         {usage && (
@@ -186,6 +195,7 @@ export default function App() {
       {tab === "glossary" && <Glossary editable={isAdmin} />}
       {tab === "cache" && isAdmin && <CachePanel />}
       {tab === "logs" && isAdmin && <Logs />}
+      {tab === "cookies" && isAdmin && <Cookies />}
 
       {tab === "translate" && status?.status === "error" && (
         <div className="error">⚠ {status.error}</div>

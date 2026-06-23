@@ -132,6 +132,23 @@ export async function getStats(): Promise<Stats> {
   return r.json();
 }
 
+export type CookieStatus = { set: boolean; updated: number | null; lines: number };
+
+export async function getCookieStatus(): Promise<CookieStatus> {
+  const r = await fetch(`${API_BASE}/api/cookies`, { headers: adminHeaders() });
+  return r.json();
+}
+
+export async function saveCookies(cookies: string): Promise<void> {
+  const r = await fetch(`${API_BASE}/api/cookies`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...adminHeaders() },
+    body: JSON.stringify({ cookies }),
+  });
+  if (r.status === 403) throw new Error("Admin only.");
+  if (!r.ok) throw new Error("Save failed");
+}
+
 export type Term = { zh: string; en: string; note?: string };
 
 export async function getGlossary(): Promise<Term[]> {

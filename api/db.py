@@ -47,6 +47,8 @@ _SCHEMA_SQLITE = [
     "CREATE TABLE IF NOT EXISTS logs ("
     " id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, ip TEXT, video_id TEXT,"
     " event TEXT, detail TEXT)",
+    "CREATE TABLE IF NOT EXISTS app_settings ("
+    " key TEXT PRIMARY KEY, value TEXT, updated REAL)",
 ]
 _SCHEMA_PG = [
     "CREATE TABLE IF NOT EXISTS videos ("
@@ -56,6 +58,8 @@ _SCHEMA_PG = [
     "CREATE TABLE IF NOT EXISTS logs ("
     " id BIGSERIAL PRIMARY KEY, ts DOUBLE PRECISION, ip TEXT, video_id TEXT,"
     " event TEXT, detail TEXT)",
+    "CREATE TABLE IF NOT EXISTS app_settings ("
+    " key TEXT PRIMARY KEY, value TEXT, updated DOUBLE PRECISION)",
 ]
 
 

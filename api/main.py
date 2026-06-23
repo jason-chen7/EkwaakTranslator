@@ -28,7 +28,7 @@ def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
     if ADMIN_TOKEN and x_admin_token != ADMIN_TOKEN:
         raise HTTPException(403, "Editing is restricted to the admin.")
 
-from . import cache, glossary_store, jobs, limits, logs  # noqa: E402
+from . import cache, glossary_store, jobs, limits, logs, settings  # noqa: E402
 from .pipeline.download import extract_video_id  # noqa: E402
 
 app = FastAPI(title="Ekwaak Translator")
@@ -52,6 +52,10 @@ class Term(BaseModel):
 
 class GlossaryReq(BaseModel):
     terms: list[Term]
+
+
+class CookiesReq(BaseModel):
+    cookies: str
 
 
 def _client_ip(request: Request) -> str:
@@ -130,7 +134,11 @@ def debug():
         "node_found": shutil.which("node"),
         "ffmpeg_found": shutil.which("ffmpeg"),
         "whisper_backend": os.getenv("WHISPER_BACKEND"),
-        "has_cookies": bool(os.getenv("YTDLP_COOKIES_CONTENT") or os.getenv("YTDLP_COOKIES_FILE")),
+        "has_cookies": bool(
+            settings.get("youtube_cookies")
+            or os.getenv("YTDLP_COOKIES_CONTENT")
+            or os.getenv("YTDLP_COOKIES_FILE")
+        ),
         "player_client": os.getenv("YTDLP_PLAYER_CLIENT") or "(default)",
         "db_backend": "postgres" if db.IS_PG else "sqlite (ephemeral!)",
         "cached_videos": len(cache.list_all()),
@@ -175,6 +183,23 @@ def get_logs(limit: int = 200, _: None = Depends(require_admin)):
 @app.get("/api/stats")
 def get_stats(_: None = Depends(require_admin)):
     return logs.stats()
+
+
+@app.get("/api/cookies")
+def cookies_status(_: None = Depends(require_admin)):
+    """Whether YouTube cookies are set + when (never returns the cookies)."""
+    val = settings.get("youtube_cookies")
+    return {
+        "set": bool(val),
+        "updated": settings.updated_at("youtube_cookies"),
+        "lines": len(val.strip().splitlines()) if val else 0,
+    }
+
+
+@app.put("/api/cookies")
+def set_cookies(req: CookiesReq, _: None = Depends(require_admin)):
+    settings.set("youtube_cookies", req.cookies)
+    return {"ok": True, "lines": len(req.cookies.strip().splitlines())}
 
 
 @app.get("/api/glossary")

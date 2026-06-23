@@ -35,18 +35,36 @@ def extract_video_id(url: str) -> str | None:
 
 
 _cookie_tmp: str | None = None
+_cookie_hash: str | None = None
+
+
+def _cookie_content() -> str | None:
+    """Cookies come from (in order): the admin-editable DB setting, then the
+    YTDLP_COOKIES_CONTENT env var."""
+    from .. import settings
+
+    try:
+        db_cookies = settings.get("youtube_cookies")
+    except Exception:
+        db_cookies = None
+    return db_cookies or os.getenv("YTDLP_COOKIES_CONTENT")
 
 
 def _resolve_cookiefile() -> str | None:
-    """Return a path to a cookies.txt, writing one from YTDLP_COOKIES_CONTENT if
-    provided (so cookies can live in a server env var, not the repo)."""
-    global _cookie_tmp
-    content = os.getenv("YTDLP_COOKIES_CONTENT")
+    """Return a path to a cookies.txt. Writes a temp file from the current
+    cookie content, rewriting it whenever the content changes (so refreshing
+    cookies in the admin UI takes effect immediately)."""
+    global _cookie_tmp, _cookie_hash
+    content = _cookie_content()
     if content:
-        if _cookie_tmp is None:
+        import hashlib
+
+        h = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        if _cookie_tmp is None or h != _cookie_hash:
             fd, _cookie_tmp = tempfile.mkstemp(prefix="ytcookies_", suffix=".txt")
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(content)
+            _cookie_hash = h
         return _cookie_tmp
     return os.getenv("YTDLP_COOKIES_FILE")
 
