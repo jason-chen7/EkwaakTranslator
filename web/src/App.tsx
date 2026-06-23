@@ -35,6 +35,7 @@ export default function App() {
   const [showOriginal, setShowOriginal] = useState(true);
   const [tab, setTab] = useState<"translate" | "glossary" | "cache" | "logs" | "cookies">("translate");
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [backendAwake, setBackendAwake] = useState<boolean | null>(null); // null = checking
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginInput, setLoginInput] = useState("");
@@ -63,11 +64,29 @@ export default function App() {
   };
 
   const refreshUsage = useCallback(() => {
-    getUsage().then(setUsage).catch(() => {});
+    getUsage()
+      .then((u) => { setUsage(u); setBackendAwake(true); })
+      .catch(() => {});
   }, []);
+
+  // On load: check if backend is awake. If not, poll every 5s until it wakes.
   useEffect(() => {
-    refreshUsage();
-  }, [refreshUsage]);
+    let cancelled = false;
+    const tryWake = () => {
+      getUsage()
+        .then((u) => {
+          if (!cancelled) { setUsage(u); setBackendAwake(true); }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setBackendAwake(false);
+            setTimeout(tryWake, 5000);
+          }
+        });
+    };
+    tryWake();
+    return () => { cancelled = true; };
+  }, []);
 
   // Admin mode: set the token once by visiting the site with #admin=YOUR_TOKEN.
   useEffect(() => {
@@ -176,18 +195,25 @@ export default function App() {
         {tab === "translate" && (
           <div className="hero">
             <div className="hero-line top">Watch Ekwaak</div>
+            <div className="hero-line bottom">Stop Being Shit</div>
+            {backendAwake === false && (
+              <div className="wake-banner">
+                Backend is starting up — this takes about 30 seconds. Don't spam translate.
+                <span className="wake-dot" />
+              </div>
+            )}
             <form className="hero-form" onSubmit={onSubmit}>
               <input
                 className="hero-input"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="Paste a YouTube URL…"
+                disabled={backendAwake === false}
               />
-              <button className="hero-btn" disabled={busy}>
+              <button className="hero-btn" disabled={busy || backendAwake === false}>
                 {busy ? "Working…" : "Translate"}
               </button>
             </form>
-            <div className="hero-line bottom">Stop Being Shit</div>
           </div>
         )}
       </header>
