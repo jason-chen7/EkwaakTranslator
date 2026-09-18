@@ -73,8 +73,17 @@ def download_audio(url: str, out_dir: str | None = None) -> tuple[str, dict]:
     """Download best audio-only stream. Returns (path, info_dict)."""
     out_dir = out_dir or tempfile.gettempdir()
     outtmpl = str(Path(out_dir) / "%(id)s.%(ext)s")
+    # Prefer a low-bitrate audio-only stream. "bestaudio" is a *query* resolved
+    # against whatever YouTube offers, so it can swing from ~130kbps Opus to
+    # ~256kbps AAC for the same duration -- which silently blows the OpenAI
+    # Whisper API's 25MB upload cap on longer videos. Capping the bitrate makes
+    # file size predictable (duration x bitrate); speech transcribes just as
+    # well at 64kbps. Falls back to unconstrained bestaudio if no capped stream
+    # exists, so this can never make a video undownloadable.
+    abr_cap = os.getenv("YTDLP_MAX_ABR", "64")
+    fmt = f"bestaudio[abr<={abr_cap}]/bestaudio/best" if abr_cap else "bestaudio/best"
     opts = {
-        "format": "bestaudio/best",
+        "format": fmt,
         "outtmpl": outtmpl,
         "quiet": True,
         "no_warnings": True,

@@ -41,8 +41,22 @@ def _transcribe_local(audio_path: str) -> list[Segment]:
     return out
 
 
+# The OpenAI audio API rejects uploads over 25MB with a raw 413. We check
+# first so the UI shows a sentence a human can act on instead of an upstream
+# HTTP error. Slightly under the real cap to leave room for multipart overhead.
+_OPENAI_MAX_BYTES = 24 * 1024 * 1024
+
+
 def _transcribe_openai(audio_path: str) -> list[Segment]:
     from openai import OpenAI
+
+    size = os.path.getsize(audio_path)
+    if size > _OPENAI_MAX_BYTES:
+        mb = size / 1024 / 1024
+        raise ValueError(
+            f"Audio is {mb:.0f}MB, over the {_OPENAI_MAX_BYTES // 1024 // 1024}MB "
+            "transcription limit. This video is too long -- try a shorter one."
+        )
 
     client = OpenAI()
     with open(audio_path, "rb") as f:
