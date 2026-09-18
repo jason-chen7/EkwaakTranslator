@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 import anthropic
 
@@ -46,12 +47,20 @@ def _translate_batch(client, system_blocks, batch: list[dict]) -> list[str]:
         "Return ONLY a JSON array of strings, in the same order, same length "
         f"({len(batch)} items). No keys, no commentary.\n\n" + numbered
     )
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=8192,
-        system=system_blocks,
-        messages=[{"role": "user", "content": user}],
-    )
+    for attempt in range(4):
+        try:
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=8192,
+                system=system_blocks,
+                messages=[{"role": "user", "content": user}],
+            )
+            break
+        except anthropic.APIStatusError as e:
+            if e.status_code == 529 and attempt < 3:
+                time.sleep(15 * (attempt + 1))
+                continue
+            raise
     text = "".join(b.text for b in resp.content if b.type == "text").strip()
     # tolerate ```json fences
     if text.startswith("```"):
